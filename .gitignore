@@ -1,0 +1,34 @@
+# Local runtime state and caches
+.cache/
+.runtime/
+**/.runtime/
+**/__pycache__/
+*.py[cod]
+
+# Local Python environments
+envs/
+.venv/
+venv/
+
+# Third-party source checkouts. Keep these as separate repos or submodules.
+external-tools/
+
+# Generated crawler output
+media-intel-local/output/*
+!media-intel-local/output/.gitkeep
+
+# Local secrets/session data
+*.env
+*.local
+cookies.json
+qrcode.png
+browser-data/
+data/*.db
+*.sqlite
+*.sqlite3
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,193 @@
+from typing import Any, Dict, List
+
+from crawlers.base import BaseCrawler
+from crawlers.external import python_command, run_json_command
+
+
+class XiaohongshuCrawler(BaseCrawler):
+    source_type = "xiaohongshu"
+
+    def fetch(self, source: Dict[str, Any], target_date: str) -> List[Dict[str, Any]]:
+        if self._is_mock_source(source):
+            items = self._read_mock_items(source)
+            return self._filter_by_date(items, "time", target_date)
+
+        candidates = self._load_candidates(source)
+        items = [self._candidate_to_item(candidate, source) for candidate in candidates]
+        return self._filter_by_date(items, "time", target_date)
+
+    def _load_candidates(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
+        mode = str(source.get("mode") or "").strip()
+        if mode == "keyword_search":
+            payload = self._run_skill(
+                source,
+                self._search_args(source),
+                timeout_seconds=int(source.get("search_timeout_seconds") or 300),
+            )
+            results = payload.get("results", []) if isinstance(payload, dict) else []
+            return [item for item in results if isinstance(item, dict)]
+        if mode == "user_profile":
+            user_id = str(source.get("user_id") or "").strip()
+            if not user_id:
+                raise ValueError("xiaohongshu source {} is missing user_id".format(source.get("id", "")))
+            args = ["user", user_id]
+            if source.get("xsec_token"):
+                args.append(str(source["xsec_token"]))
+            payload = self._run_skill(
+                source,
+                args,
+                timeout_seconds=int(source.get("profile_timeout_seconds") or 300),
+            )
+            feeds = payload.get("feeds", []) if isinstance(payload, dict) else []
+            return [item for item in feeds if isinstance(item, dict)]
+        raise ValueError(
+            "xiaohongshu source {} has unsupported mode {}".format(
+                source.get("id", ""), mode
+            )
+        )
+
+    def _search_args(self, source: Dict[str, Any]) -> List[str]:
+        keyword = str(source.get("keyword") or "").strip()
+        if not keyword:
+            raise ValueError("xiaohongshu keyword source {} is missing keyword".format(source.get("id", "")))
+        args = ["search", keyword, "--limit={}".format(int(source.get("limit") or 20))]
+        option_map = {
+            "sort_by": "--sort-by={}",
+            "note_type": "--note-type={}",
+            "publish_time": "--publish-time={}",
+            "search_scope": "--search-scope={}",
+            "location": "--location={}",
+        }
+        for key, template in option_map.items():
+            if source.get(key):
+                args.append(template.format(source[key]))
+        if not source.get("publish_time"):
+            args.append("--publish-time=一天内")
+        return args
+
+    def _candidate_to_item(
+        self, candidate: Dict[str, Any], source: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        detail = candidate
+        if source.get("fetch_detail", True):
+            feed_id = self._candidate_id(candidate)
+            xsec_token = self._candidate_token(candidate)
+            if feed_id:
+                detail = self._run_skill(
+                    source,
+                    ["feed", feed_id, xsec_token],
+                    timeout_seconds=int(source.get("detail_timeout_seconds") or 300),
+                )
+        return self._to_raw_item(candidate, detail)
+
+    def _to_raw_item(
+        self, candidate: Dict[str, Any], detail: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        note = detail.get("note") if isinstance(detail, dict) else {}
+        if not isinstance(note, dict):
+            note = {}
+        card = candidate.get("noteCard") if isinstance(candidate, dict) else {}
+        if not isinstance(card, dict):
+            card = {}
+        interact = note.get("interactInfo") or card.get("interactInfo") or {}
+        if not isinstance(interact, dict):
+            interact = {}
+        feed_id = self._candidate_id(candidate) or note.get("noteId") or note.get("id") or ""
+        image_list = note.get("imageList") or note.get("images") or []
+        return {
+            "note_title": note.get("title")
+            or note.get("displayTitle")
+            or candidate.get("title")
+            or card.get("displayTitle", ""),
+            "note_url": note.get("url")
+            or (
+                "https://www.xiaohongshu.com/explore/{}".format(feed_id)
+                if feed_id
+                else ""
+            ),
+            "time": self._normalized_datetime(
+                note.get("time")
+                or note.get("createTime")
+                or detail.get("time")
+                or candidate.get("time", "")
+            ),
+            "desc": note.get("desc")
+            or note.get("description")
+            or note.get("content")
+            or "",
+            "likes": self._metric(interact, "likedCount", candidate.get("liked_count")),
+            "favorites": self._metric(
+                interact, "collectedCount", candidate.get("collected_count")
+            ),
+            "comments": self._metric(
+                interact, "commentCount", candidate.get("comment_count")
+            ),
+            "images": self._images(image_list, candidate, card),
+            "skill_raw": {"candidate": candidate, "detail": detail},
+        }
+
+    def _candidate_id(self, candidate: Dict[str, Any]) -> str:
+        return str(candidate.get("id") or candidate.get("noteId") or "")
+
+    def _candidate_token(self, candidate: Dict[str, Any]) -> str:
+        return str(candidate.get("xsec_token") or candidate.get("xsecToken") or "")
+
+    def _metric(self, metrics: Dict[str, Any], key: str, fallback: Any) -> Any:
+        value = metrics.get(key)
+        if value in (None, ""):
+            value = fallback
+        if isinstance(value, str):
+            digits = value.replace(",", "").strip()
+            if digits.isdigit():
+                return int(digits)
+        return value
+
+    def _images(
+        self,
+        image_list: Any,
+        candidate: Dict[str, Any],
+        card: Dict[str, Any],
+    ) -> List[Any]:
+        images = []
+        if isinstance(image_list, list):
+            for image in image_list:
+                if isinstance(image, str):
+                    images.append(image)
+                elif isinstance(image, dict):
+                    info_list = image.get("infoList") or [{}]
+                    image_url = (
+                        image.get("urlDefault")
+                        or image.get("url")
+                        or image.get("urlPre")
+                        or info_list[0].get("url", "")
+                    )
+                    if image_url:
+                        images.append(image_url)
+        cover = candidate.get("cover_url")
+        if not cover and isinstance(card.get("cover"), dict):
+            cover = card["cover"].get("urlDefault")
+        if cover and cover not in images:
+            images.append(cover)
+        return images
+
+    def _run_skill(
+        self, source: Dict[str, Any], args: List[str], timeout_seconds: int
+    ) -> Dict[str, Any]:
+        skill_dir = source.get("skill_dir")
+        if not skill_dir:
+            raise ValueError("xiaohongshu source {} is missing skill_dir".format(source.get("id", "")))
+        command = python_command(source.get("skill_python"), self.project_root)
+        command.extend(["-m", "scripts"])
+        if source.get("cookie_path"):
+            command.append("--cookie={}".format(source["cookie_path"]))
+        if source.get("headless") is not None:
+            command.append("--headless={}".format(str(source["headless"]).lower()))
+        command.extend(args)
+        payload = run_json_command(
+            command,
+            cwd=self.project_root / str(skill_dir),
+            timeout_seconds=timeout_seconds,
+        )
+        if not isinstance(payload, dict):
+            raise ValueError("xiaohongshu-skill must return a JSON object")
+        return payload

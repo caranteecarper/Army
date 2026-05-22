@@ -1,0 +1,182 @@
+project:
+  name: daily-media-intel-local
+  timezone: Asia/Shanghai
+  output_dir: output
+
+wechat:
+  - id: wx_001
+    name: 公众号A
+    type: wechat
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/wechat_items.json
+
+  - id: wx_002
+    name: 公众号B
+    type: wechat
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/wechat_items.json
+
+  - id: wx_003
+    name: 公众号C
+    type: wechat
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/wechat_items.json
+
+  - id: wx_real_example
+    name: 真实公众号示例
+    type: wechat
+    enabled: false
+    fetch_mode: wewe_rss
+    feed_url: http://127.0.0.1:4000/feeds/replace-me.rss
+    article_enrichment: true
+    wechat_article_python: ../envs/media-crawlers/python.exe
+    wechat_article_crawler_dir: ../external-tools/wechat-article-crawler
+
+  - id: wx_wewe_walk_from_barracks
+    name: 我们从军营走来
+    type: wechat
+    enabled: true
+    fetch_mode: wewe_rss
+    feed_url: http://127.0.0.1:4000/feeds/MP_WXS_3271380538.rss?limit=50&mode=list
+    article_enrichment: true
+    browser_channel: chrome
+    wechat_article_python: ../envs/media-crawlers/python.exe
+    wechat_article_crawler_dir: ../external-tools/wechat-article-crawler
+
+  - id: wx_wewe_dayuan_children
+    name: 大院子女
+    type: wechat
+    enabled: true
+    fetch_mode: wewe_rss
+    feed_url: http://127.0.0.1:4000/feeds/MP_WXS_3578516217.rss?limit=50&mode=list
+    article_enrichment: true
+    browser_channel: chrome
+    wechat_article_python: ../envs/media-crawlers/python.exe
+    wechat_article_crawler_dir: ../external-tools/wechat-article-crawler
+
+  - id: wx_wewe_38th_army
+    name: 38军军魂
+    type: wechat
+    enabled: true
+    fetch_mode: wewe_rss
+    feed_url: http://127.0.0.1:4000/feeds/MP_WXS_3541975224.rss?limit=50&mode=list
+    article_enrichment: true
+    browser_channel: chrome
+    wechat_article_python: ../envs/media-crawlers/python.exe
+    wechat_article_crawler_dir: ../external-tools/wechat-article-crawler
+
+websites:
+  - id: web_001
+    name: 网站A
+    type: website
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/website_items.json
+
+  - id: web_002
+    name: 网站B
+    type: website
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/website_items.json
+
+  - id: web_003
+    name: 网站C
+    type: website
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/website_items.json
+
+  - id: web_real_example
+    name: 真实网站示例
+    type: website
+    enabled: false
+    fetch_mode: crawl4ai
+    crawl4ai_python: ../envs/media-crawlers/python.exe
+    browser_channel: chrome
+    list_url: https://example.com/news
+    article_url_pattern: /news/
+    max_articles: 20
+
+  - id: web_huanqiu_mil
+    name: 环球网军事
+    type: website
+    enabled: true
+    fetch_mode: crawl4ai
+    crawl4ai_python: ../envs/media-crawlers/python.exe
+    browser_channel: chrome
+    list_url: https://mil.huanqiu.com/
+    article_seed_mode: huanqiu_aid_textarea
+    article_url_pattern: '^https://mil\.huanqiu\.com/article/'
+    max_articles: 30
+
+  - id: web_ifeng_mil
+    name: 凤凰网军事
+    type: website
+    enabled: true
+    fetch_mode: crawl4ai
+    crawl4ai_python: ../envs/media-crawlers/python.exe
+    browser_channel: chrome
+    list_url: https://mil.ifeng.com/
+    article_url_pattern: '^https://mil\.ifeng\.com/c/(?!special/)'
+    max_articles: 30
+
+  - id: web_thepaper_defense
+    name: 澎湃防务
+    type: website
+    enabled: true
+    fetch_mode: crawl4ai
+    crawl4ai_python: ../envs/media-crawlers/python.exe
+    browser_channel: chrome
+    list_url: https://www.thepaper.cn/list_25430
+    article_url_pattern: '/newsDetail_forward_[0-9]+$'
+    max_articles: 30
+
+xhs:
+  - id: xhs_001
+    name: 小红书账号A
+    type: xiaohongshu
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/xhs_items.json
+    mode: user_profile
+    user_id: mock_user_a
+    keyword: ""
+
+  - id: xhs_002
+    name: 小红书账号B
+    type: xiaohongshu
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/xhs_items.json
+    mode: user_profile
+    user_id: mock_user_b
+    keyword: ""
+
+  - id: xhs_003
+    name: 小红书关键词测试
+    type: xiaohongshu
+    enabled: false
+    fetch_mode: mock
+    mock_file: mock_data/xhs_items.json
+    mode: keyword_search
+    user_id: ""
+    keyword: 退役军人
+    sort_by: latest
+
+  - id: xhs_real_example
+    name: 真实小红书关键词示例
+    type: xiaohongshu
+    enabled: false
+    fetch_mode: xiaohongshu_skill
+    skill_python: ../envs/media-crawlers/python.exe
+    skill_dir: ../external-tools/xiaohongshu-skill
+    mode: keyword_search
+    keyword: 退役军人
+    sort_by: 最新
+    publish_time: 一天内
+    fetch_detail: true
+    limit: 20

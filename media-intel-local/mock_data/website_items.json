@@ -1,0 +1,37 @@
+[
+  {
+    "headline": "退役军人职业技能提升相关政策解读",
+    "link": "https://example.com/news/web001",
+    "date": "2026-05-21",
+    "markdown": "本文围绕退役军人职业技能提升、就业培训、补贴政策等内容进行说明。",
+    "source": "网站A"
+  },
+  {
+    "headline": "无人机应用人才培养受到关注",
+    "link": "https://example.com/news/web002",
+    "date": "2026-05-21",
+    "markdown": "随着低空经济和无人机应用发展，无人机培训和相关证书受到更多关注。",
+    "source": "网站A"
+  },
+  {
+    "headline": "不相关的社会新闻",
+    "link": "https://example.com/news/web003",
+    "date": "2026-05-21",
+    "markdown": "这是一条与当前军旅教培业务无关的普通新闻。",
+    "source": "网站B"
+  },
+  {
+    "headline": "旧网页内容",
+    "link": "https://example.com/news/web004",
+    "date": "2026-05-20",
+    "markdown": "这条用于测试日期过滤。",
+    "source": "网站C"
+  },
+  {
+    "headline": "入伍前需要提前了解的体检和政审事项",
+    "link": "https://example.com/news/web005",
+    "date": "2026-05-21",
+    "markdown": "入伍前体检、政审和个人材料准备，是很多青年和家庭关注的问题。",
+    "source": "网站C"
+  }
+]

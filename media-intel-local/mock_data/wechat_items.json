@@ -1,0 +1,42 @@
+[
+  {
+    "title": "退役军人就业新方向：无人机培训为什么值得关注",
+    "url": "https://mp.weixin.qq.com/s/mock001",
+    "published_at": "2026-05-21 09:00:00",
+    "content": "退役军人在就业转型过程中，技能培训和证书提升成为重要方向。无人机培训、职业技能证书等内容正在被更多人关注。",
+    "read_count": 1200,
+    "like_count": 80
+  },
+  {
+    "title": "军考政策变化，这几个细节要提前了解",
+    "url": "https://mp.weixin.qq.com/s/mock002",
+    "published_at": "2026-05-21 12:00:00",
+    "content": "军考相关政策变化会影响备考节奏，考生需要关注报名条件、考试内容和时间安排。",
+    "read_count": 900,
+    "like_count": 45
+  },
+  {
+    "title": "普通新闻转载：无明显业务相关内容",
+    "url": "https://mp.weixin.qq.com/s/mock003",
+    "published_at": "2026-05-21 15:00:00",
+    "content": "这是一条普通新闻转载内容，与军旅教培业务相关性较弱。",
+    "read_count": 300,
+    "like_count": 5
+  },
+  {
+    "title": "昨天之外的旧文章",
+    "url": "https://mp.weixin.qq.com/s/mock004",
+    "published_at": "2026-05-20 10:00:00",
+    "content": "这条用于测试日期过滤，不应该出现在 2026-05-21 的结果里。",
+    "read_count": 500,
+    "like_count": 20
+  },
+  {
+    "title": "文职岗位到底适合哪些人报考",
+    "url": "https://mp.weixin.qq.com/s/mock005",
+    "published_at": "2026-05-21 18:00:00",
+    "content": "军队文职岗位近年来受到关注，适合有学历基础、希望稳定发展的群体。",
+    "read_count": 1600,
+    "like_count": 120
+  }
+]
