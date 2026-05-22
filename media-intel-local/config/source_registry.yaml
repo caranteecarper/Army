@@ -170,13 +170,15 @@ xhs:
   - id: xhs_real_example
     name: 真实小红书关键词示例
     type: xiaohongshu
-    enabled: false
+    enabled: true
     fetch_mode: xiaohongshu_skill
     skill_python: ../envs/media-crawlers/python.exe
     skill_dir: ../external-tools/xiaohongshu-skill
+    cookie_path: .runtime/xiaohongshu/cookies.json
+    headless: true
     mode: keyword_search
     keyword: 退役军人
     sort_by: 最新
     publish_time: 一天内
-    fetch_detail: true
-    limit: 20
+    fetch_detail: false
+    limit: 10

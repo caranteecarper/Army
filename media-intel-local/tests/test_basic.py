@@ -138,6 +138,23 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(raw_item["likes"], 12)
         self.assertEqual(raw_item["note_url"], "https://www.xiaohongshu.com/explore/note-1")
 
+    def test_xhs_search_card_can_fallback_to_target_date(self):
+        crawler = XiaohongshuCrawler(PROJECT_ROOT)
+        raw_item = crawler._to_raw_item(
+            {
+                "id": "note-1",
+                "title": "",
+                "user": "测试用户",
+                "liked_count": "5",
+            },
+            {},
+            target_date="2026-05-22",
+        )
+
+        self.assertEqual(raw_item["note_title"], "小红书笔记 - 测试用户")
+        self.assertEqual(raw_item["time"], "2026-05-22")
+        self.assertEqual(raw_item["time_source"], "target_date_fallback")
+
 
 if __name__ == "__main__":
     unittest.main()

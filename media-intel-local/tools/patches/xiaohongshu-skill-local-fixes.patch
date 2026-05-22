@@ -1,0 +1,59 @@
+diff --git a/scripts/client.py b/scripts/client.py
+index 3a625de..306a253 100644
+--- a/scripts/client.py
++++ b/scripts/client.py
+@@ -151,6 +151,10 @@ class XiaohongshuClient:
+         os.makedirs(self.user_data_dir, exist_ok=True)
+ 
+         # 使用持久化上下文：自动保存 cookies + localStorage + sessionStorage + indexedDB
++        browser_channel = os.getenv("XHS_BROWSER_CHANNEL")
++        launch_options = {}
++        if browser_channel:
++            launch_options["channel"] = browser_channel
+         self.context = self.playwright.chromium.launch_persistent_context(
+             user_data_dir=self.user_data_dir,
+             headless=self.headless,
+@@ -167,6 +171,7 @@ class XiaohongshuClient:
+                 '--disable-gpu',
+             ],
+             ignore_default_args=['--enable-automation'],
++            **launch_options,
+         )
+         self.browser = None  # persistent context 无需单独的 browser 对象
+ 
+diff --git a/scripts/login.py b/scripts/login.py
+index e4d0da7..414b495 100644
+--- a/scripts/login.py
++++ b/scripts/login.py
+@@ -171,14 +171,13 @@ class LoginAction:
+                 print(f"  等待中... 还剩 {remaining} 秒", file=sys.stderr)
+             time.sleep(2)
+ 
+-        # ---- 阶段 2: 开始轮询检测 web_session cookie ----
++        # ---- 阶段 2: 开始轮询检测登录弹窗是否完成 ----
+         print("开始检测登录状态...", file=sys.stderr)
+         while time.time() - start < timeout:
+             try:
+-                cookies = self.client.context.cookies()
+-                has_session = any(c['name'] == 'web_session' for c in cookies)
+-                if has_session:
+-                    print("检测到 web_session cookie，登录成功！", file=sys.stderr)
++                is_logged_in, _ = self.check_login_status(navigate=False)
++                if is_logged_in:
++                    print("检测到扫码登录完成！", file=sys.stderr)
+                     # 等待页面完成登录流程（写入 localStorage/sessionStorage）
+                     # 持久化上下文需要这些状态才能在下次启动时保持登录
+                     print("等待页面完成登录初始化...", file=sys.stderr)
+diff --git a/scripts/search.py b/scripts/search.py
+index 1c31627..4f274b7 100644
+--- a/scripts/search.py
++++ b/scripts/search.py
+@@ -121,7 +121,7 @@ class SearchAction:
+         filter_panel = page.locator('div.filter-panel')
+         for tag_text in filter_texts:
+             try:
+-                filter_panel.get_by_text(tag_text, exact=True).click()
++                filter_panel.get_by_text(tag_text, exact=True).first.click()
+                 time.sleep(0.3)
+             except Exception as e:
+                 print(f"点击筛选选项失败: {e}", file=sys.stderr)

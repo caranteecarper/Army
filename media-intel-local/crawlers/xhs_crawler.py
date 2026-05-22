@@ -1,7 +1,8 @@
+from pathlib import Path
 from typing import Any, Dict, List
 
 from crawlers.base import BaseCrawler
-from crawlers.external import python_command, run_json_command
+from crawlers.external import ExternalCommandError, python_command, run_json_command
 
 
 class XiaohongshuCrawler(BaseCrawler):
@@ -13,7 +14,10 @@ class XiaohongshuCrawler(BaseCrawler):
             return self._filter_by_date(items, "time", target_date)
 
         candidates = self._load_candidates(source)
-        items = [self._candidate_to_item(candidate, source) for candidate in candidates]
+        items = [
+            self._candidate_to_item(candidate, source, target_date)
+            for candidate in candidates
+        ]
         return self._filter_by_date(items, "time", target_date)
 
     def _load_candidates(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -66,22 +70,28 @@ class XiaohongshuCrawler(BaseCrawler):
         return args
 
     def _candidate_to_item(
-        self, candidate: Dict[str, Any], source: Dict[str, Any]
+        self, candidate: Dict[str, Any], source: Dict[str, Any], target_date: str
     ) -> Dict[str, Any]:
         detail = candidate
         if source.get("fetch_detail", True):
             feed_id = self._candidate_id(candidate)
             xsec_token = self._candidate_token(candidate)
             if feed_id:
-                detail = self._run_skill(
-                    source,
-                    ["feed", feed_id, xsec_token],
-                    timeout_seconds=int(source.get("detail_timeout_seconds") or 300),
-                )
-        return self._to_raw_item(candidate, detail)
+                try:
+                    detail = self._run_skill(
+                        source,
+                        ["feed", feed_id, xsec_token],
+                        timeout_seconds=int(source.get("detail_timeout_seconds") or 300),
+                    )
+                except ExternalCommandError as exc:
+                    detail = {
+                        "detail_error": str(exc),
+                        "note": {},
+                    }
+        return self._to_raw_item(candidate, detail, target_date)
 
     def _to_raw_item(
-        self, candidate: Dict[str, Any], detail: Dict[str, Any]
+        self, candidate: Dict[str, Any], detail: Dict[str, Any], target_date: str = ""
     ) -> Dict[str, Any]:
         note = detail.get("note") if isinstance(detail, dict) else {}
         if not isinstance(note, dict):
@@ -94,26 +104,38 @@ class XiaohongshuCrawler(BaseCrawler):
             interact = {}
         feed_id = self._candidate_id(candidate) or note.get("noteId") or note.get("id") or ""
         image_list = note.get("imageList") or note.get("images") or []
+        time_value = (
+            note.get("time")
+            or note.get("createTime")
+            or detail.get("time")
+            or candidate.get("time", "")
+        )
+        if time_value:
+            normalized_time = self._normalized_datetime(time_value)
+            time_source = "raw"
+        else:
+            normalized_time = target_date
+            time_source = "target_date_fallback" if target_date else "missing"
+
         return {
             "note_title": note.get("title")
             or note.get("displayTitle")
             or candidate.get("title")
-            or card.get("displayTitle", ""),
+            or card.get("displayTitle")
+            or self._fallback_title(candidate),
             "note_url": note.get("url")
             or (
                 "https://www.xiaohongshu.com/explore/{}".format(feed_id)
                 if feed_id
                 else ""
             ),
-            "time": self._normalized_datetime(
-                note.get("time")
-                or note.get("createTime")
-                or detail.get("time")
-                or candidate.get("time", "")
-            ),
+            "time": normalized_time,
+            "time_source": time_source,
             "desc": note.get("desc")
             or note.get("description")
             or note.get("content")
+            or candidate.get("desc")
+            or candidate.get("description")
             or "",
             "likes": self._metric(interact, "likedCount", candidate.get("liked_count")),
             "favorites": self._metric(
@@ -125,6 +147,12 @@ class XiaohongshuCrawler(BaseCrawler):
             "images": self._images(image_list, candidate, card),
             "skill_raw": {"candidate": candidate, "detail": detail},
         }
+
+    def _fallback_title(self, candidate: Dict[str, Any]) -> str:
+        user = str(candidate.get("user") or "").strip()
+        if user:
+            return "小红书笔记 - {}".format(user)
+        return "小红书笔记"
 
     def _candidate_id(self, candidate: Dict[str, Any]) -> str:
         return str(candidate.get("id") or candidate.get("noteId") or "")
@@ -179,7 +207,7 @@ class XiaohongshuCrawler(BaseCrawler):
         command = python_command(source.get("skill_python"), self.project_root)
         command.extend(["-m", "scripts"])
         if source.get("cookie_path"):
-            command.append("--cookie={}".format(source["cookie_path"]))
+            command.append("--cookie={}".format(self._project_path(source["cookie_path"])))
         if source.get("headless") is not None:
             command.append("--headless={}".format(str(source["headless"]).lower()))
         command.extend(args)
@@ -191,3 +219,9 @@ class XiaohongshuCrawler(BaseCrawler):
         if not isinstance(payload, dict):
             raise ValueError("xiaohongshu-skill must return a JSON object")
         return payload
+
+    def _project_path(self, value: Any) -> Path:
+        path = Path(str(value))
+        if path.is_absolute():
+            return path
+        return self.project_root / path

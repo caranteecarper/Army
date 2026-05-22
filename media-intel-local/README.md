@@ -163,15 +163,18 @@ article_urls:
   fetch_mode: xiaohongshu_skill
   skill_python: ../envs/media-crawlers/python.exe
   skill_dir: ../external-tools/xiaohongshu-skill
+  cookie_path: .runtime/xiaohongshu/cookies.json
+  headless: true
   mode: keyword_search
   keyword: 退役军人
   sort_by: 最新
   publish_time: 一天内
-  fetch_detail: true
+  fetch_detail: false
   limit: 20
 ```
 
 小红书真实抓取前要在 skill 环境完成登录并保留 cookie。设置 `cookie_path` 时，crawler 会把它传给 skill CLI。
+当前默认先抓搜索卡片，`fetch_detail: false`，可稳定输出标题、链接、封面和互动数据。搜索卡片没有精确发布时间时，crawler 会用本次 `target_date` 作为搜索窗口日期，并在 raw item 中标记 `time_source: target_date_fallback`。后续详情抓取稳定后再改回 `fetch_detail: true` 补正文和精确发布时间。
 
 ## 外部工具准备
 
