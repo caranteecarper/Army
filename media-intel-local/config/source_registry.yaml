@@ -111,7 +111,7 @@ websites:
     list_url: https://mil.huanqiu.com/
     article_seed_mode: huanqiu_aid_textarea
     article_url_pattern: '^https://mil\.huanqiu\.com/article/'
-    max_articles: 30
+    max_articles: 80
 
   - id: web_ifeng_mil
     name: 凤凰网军事
@@ -122,7 +122,7 @@ websites:
     browser_channel: chrome
     list_url: https://mil.ifeng.com/
     article_url_pattern: '^https://mil\.ifeng\.com/c/(?!special/)'
-    max_articles: 30
+    max_articles: 80
 
   - id: web_thepaper_defense
     name: 澎湃防务
@@ -133,7 +133,7 @@ websites:
     browser_channel: chrome
     list_url: https://www.thepaper.cn/list_25430
     article_url_pattern: '/newsDetail_forward_[0-9]+$'
-    max_articles: 30
+    max_articles: 80
 
 xhs:
   - id: xhs_001
@@ -187,7 +187,7 @@ xhs:
       - pc_note
     require_content: true
     detail_timeout_seconds: 180
-    limit: 5
+    limit: 20
 
 douyin:
   - id: dy_keyword_veteran
@@ -200,7 +200,7 @@ douyin:
     mode: keyword_search
     keyword: 退役军人
     publish_time: one_day
-    limit: 10
+    limit: 30
     login_type: qrcode
     headless: false
     enable_cdp: true
