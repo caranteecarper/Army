@@ -188,7 +188,7 @@ class WeweRssClient:
                 creationflags |= subprocess.DETACHED_PROCESS
 
         subprocess.Popen(
-            ["node", str(dist_main)],
+            [str(self._node_command()), str(dist_main)],
             cwd=str(server_dir),
             env=env,
             stdout=stdout_file,
@@ -337,3 +337,9 @@ class WeweRssClient:
         if path.is_absolute():
             return path
         return (self.project_root / path).resolve()
+
+    def _node_command(self) -> Path:
+        packaged_node = (self.project_root / ".." / "nodejs" / "node.exe").resolve()
+        if packaged_node.exists():
+            return packaged_node
+        return Path("node")
