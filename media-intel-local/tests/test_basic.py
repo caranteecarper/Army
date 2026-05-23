@@ -16,6 +16,7 @@ from core.intake_schema import (
     deduplicate_intake_items,
     should_keep_intake_item,
 )
+from core.channel_intake import build_channel_intake_items
 from adapters.douyin_adapter import adapt as adapt_douyin
 from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
@@ -383,6 +384,90 @@ class BasicPipelineTest(unittest.TestCase):
         )
 
         self.assertEqual(deduplicate_intake_items([first, duplicate]), [first])
+
+    def test_channel_intake_adapts_douyin_metrics(self):
+        items = build_channel_intake_items(
+            [
+                {
+                    "source_type": "douyin",
+                    "source_name": "抖音测试",
+                    "title": "退役军人话题#退役军人",
+                    "url": "https://www.douyin.com/video/1",
+                    "content_text": "视频文案",
+                    "metrics": {
+                        "like_count": 10,
+                        "favorite_count": 2,
+                        "comment_count": 3,
+                        "share_count": 4,
+                    },
+                    "media": {"images": [], "videos": []},
+                    "tags": [],
+                }
+            ],
+            captured_at="2026-05-23T12:00:00+08:00",
+        )
+        item = items["social_hotspot"][0]
+
+        self.assertEqual(item["platform"], "douyin")
+        self.assertEqual(item["heat_signals"]["rank"], 1)
+        self.assertEqual(item["heat_signals"]["shares"], 4)
+        self.assertIn("退役军人", item["tags"])
+        self.assertEqual(
+            item["extra"]["rank_method"],
+            "likes + favorites*2 + comments*4 + shares*6",
+        )
+
+    def test_channel_intake_adapts_xhs_metrics(self):
+        items = build_channel_intake_items(
+            [
+                {
+                    "source_type": "xiaohongshu",
+                    "source_name": "小红书测试",
+                    "title": "文职待遇",
+                    "url": "https://www.xiaohongshu.com/explore/1",
+                    "content_text": "笔记正文",
+                    "metrics": {
+                        "like_count": 10,
+                        "favorite_count": 5,
+                        "comment_count": 2,
+                    },
+                    "media": {"images": ["https://example.com/a.jpg"], "videos": []},
+                    "tags": [],
+                }
+            ],
+            captured_at="2026-05-23T12:00:00+08:00",
+        )
+        item = items["social_hotspot"][0]
+
+        self.assertEqual(item["platform"], "xiaohongshu")
+        self.assertEqual(item["raw_media"][0]["type"], "image")
+        self.assertEqual(
+            item["extra"]["rank_method"],
+            "likes + favorites*3 + comments*5",
+        )
+
+    def test_channel_intake_adapts_wechat_metrics(self):
+        items = build_channel_intake_items(
+            [
+                {
+                    "source_type": "wechat",
+                    "source_name": "公众号测试",
+                    "title": "军考政策",
+                    "url": "https://mp.weixin.qq.com/s/1",
+                    "content_text": "文章正文",
+                    "metrics": {"read_count": 1000, "like_count": 20},
+                    "media": {"images": [], "videos": []},
+                    "tags": [],
+                }
+            ],
+            captured_at="2026-05-23T12:00:00+08:00",
+        )
+        item = items["social_hotspot"][0]
+
+        self.assertEqual(item["platform"], "wechat")
+        self.assertEqual(item["heat_signals"]["views"], 1000)
+        self.assertEqual(item["heat_signals"]["likes"], 20)
+        self.assertEqual(item["extra"]["rank_method"], "reads*0.2 + likes*3")
 
 
 if __name__ == "__main__":

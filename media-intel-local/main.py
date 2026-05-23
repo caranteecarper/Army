@@ -8,6 +8,7 @@ from adapters.wechat_adapter import adapt as adapt_wechat
 from adapters.website_adapter import adapt as adapt_website
 from adapters.xhs_adapter import adapt as adapt_xhs
 from adapters.douyin_adapter import adapt as adapt_douyin
+from core.channel_intake import write_channel_intake_outputs
 from core.config_loader import load_registry_config
 from core.deduplicate import deduplicate_items
 from core.normalize import normalize_item
@@ -143,6 +144,11 @@ def run_pipeline(registry: Dict[str, Any], target_date: str) -> Dict[str, Any]:
     deduplicated_items = deduplicate_items(normalized_items)
     write_json(output_dir / "raw_items.json", raw_items)
     write_json(output_dir / "normalized_items.json", deduplicated_items)
+    channel_intake_log = write_channel_intake_outputs(
+        deduplicated_items,
+        PROJECT_ROOT / "data" / "inbox",
+        target_date,
+    )
 
     run_log = {
         "date": target_date,
@@ -155,6 +161,7 @@ def run_pipeline(registry: Dict[str, Any], target_date: str) -> Dict[str, Any]:
         "items_raw": len(raw_items),
         "items_normalized": len(normalized_items),
         "items_after_dedup": len(deduplicated_items),
+        "channel_intake": channel_intake_log,
         "errors": errors,
     }
     write_json(output_dir / "run_log.json", run_log)

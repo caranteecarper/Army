@@ -111,6 +111,20 @@ data/inbox/trend_hotspot_run_log_YYYYMMDD.json
 
 这条链路只做字段标准化、极轻过滤和去重。它不会判断是否适合军旅教培，不生成 Idea Card、Topic Card 或脚本，也不调用 AI。
 
+主采集流程也会自动把小红书、微信公众号、抖音内容派生到同一组 inbox 文件里。各平台使用不同的本地热度规则：
+
+| 平台 | 本地热度规则 |
+| --- | --- |
+| 抖音 | `likes + favorites*2 + comments*4 + shares*6` |
+| 小红书 | `likes + favorites*3 + comments*5` |
+| 微信公众号 | `reads*0.2 + likes*3` |
+
+这些规则只用于本地排序和记录 `heat_signals.rank`，不是 AI 判断，也不是业务相关性判断。已有 `normalized_items.json` 时可以离线重新生成 inbox：
+
+```bash
+python tools/channel_intake_from_output.py --date 2026-05-23
+```
+
 ## 统一 Schema
 
 所有平台最终都会输出为同一结构：
