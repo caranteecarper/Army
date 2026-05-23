@@ -4,12 +4,11 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List
 
-import yaml
-
 from adapters.wechat_adapter import adapt as adapt_wechat
 from adapters.website_adapter import adapt as adapt_website
 from adapters.xhs_adapter import adapt as adapt_xhs
 from adapters.douyin_adapter import adapt as adapt_douyin
+from core.config_loader import load_registry_config
 from core.deduplicate import deduplicate_items
 from core.normalize import normalize_item
 from crawlers.douyin_crawler import DouyinCrawler
@@ -20,6 +19,7 @@ from crawlers.xhs_crawler import XiaohongshuCrawler
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 REGISTRY_PATH = PROJECT_ROOT / "config" / "source_registry.yaml"
+CLIENT_CONFIG_PATH = PROJECT_ROOT / "config" / "client_sources.yaml"
 
 CRAWLER_CLASSES = {
     "wechat": WechatCrawler,
@@ -37,11 +37,13 @@ ADAPTERS = {
 
 
 def load_registry(registry_path: Path) -> Dict[str, Any]:
-    with registry_path.open("r", encoding="utf-8") as file_obj:
-        registry = yaml.safe_load(file_obj)
-    if not isinstance(registry, dict):
-        raise ValueError("source registry must contain a YAML mapping")
-    return registry
+    return load_registry_config(registry_path)
+
+
+def default_config_path() -> Path:
+    if CLIENT_CONFIG_PATH.exists():
+        return CLIENT_CONFIG_PATH
+    return REGISTRY_PATH
 
 
 def collect_sources(registry: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -177,16 +179,25 @@ def build_parser() -> argparse.ArgumentParser:
         default="yesterday",
         help="Target date in YYYY-MM-DD format, or yesterday.",
     )
+    parser.add_argument(
+        "--config",
+        default=str(default_config_path()),
+        help="YAML config path. Defaults to config/client_sources.yaml when present.",
+    )
     return parser
 
 
 def main() -> None:
     args = build_parser().parse_args()
-    registry = load_registry(REGISTRY_PATH)
+    config_path = Path(args.config)
+    if not config_path.is_absolute():
+        config_path = PROJECT_ROOT / config_path
+    registry = load_registry(config_path)
     project_config = registry.get("project") or {}
     target_date = parse_target_date(
         args.date, str(project_config.get("timezone") or "Asia/Shanghai")
     )
+    print("config {}".format(config_path))
     print("target date {}".format(target_date))
     run_pipeline(registry, target_date)
 

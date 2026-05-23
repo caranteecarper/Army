@@ -1,0 +1,47 @@
+project:
+  name: daily-media-intel-local
+  timezone: Asia/Shanghai
+  output_dir: output
+
+# 客户版配置：每个来源尽量只填一个链接、ID 或关键词。
+# 工具路径、浏览器、ASR、日期窗口、正文补全等工程参数由 core/config_loader.py 自动补齐。
+
+wechat:
+  - id: wx_wewe_walk_from_barracks
+    name: 我们从军营走来
+    link: http://127.0.0.1:4000/feeds/MP_WXS_3271380538.rss?limit=50&mode=list
+
+  - id: wx_wewe_dayuan_children
+    name: 大院子女
+    link: http://127.0.0.1:4000/feeds/MP_WXS_3578516217.rss?limit=50&mode=list
+
+  - id: wx_wewe_38th_army
+    name: 38军军魂
+    link: http://127.0.0.1:4000/feeds/MP_WXS_3541975224.rss?limit=50&mode=list
+
+websites:
+  - https://mil.huanqiu.com/
+  - https://mil.ifeng.com/
+  - https://www.thepaper.cn/list_25430
+
+xhs:
+  # 跟踪账号时，只填小红书 user_id；示例默认关闭，避免没有登录态时误跑。
+  - user_id: example_xhs_user_id
+    enabled: false
+
+  # 关键词监控也保留，方便当前链路继续验证。
+  - id: xhs_real_example
+    name: 真实小红书关键词示例
+    keyword: 退役军人
+    enabled: true
+
+douyin:
+  # 跟踪账号时，只填抖音 sec_user_id 或主页链接；示例默认关闭。
+  - user_id: example_douyin_sec_user_id
+    enabled: false
+
+  # 关键词监控也保留，方便当前链路继续验证。
+  - id: dy_keyword_veteran
+    name: 抖音关键词-退役军人
+    keyword: 退役军人
+    enabled: true

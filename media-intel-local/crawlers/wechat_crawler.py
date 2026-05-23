@@ -25,7 +25,12 @@ class WechatCrawler(BaseCrawler):
     def _read_wewe_feed(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
         feed_url = str(source.get("feed_url") or "").strip()
         if not feed_url:
-            raise ValueError("wechat source {} is missing feed_url".format(source.get("id", "")))
+            hint = source.get("setup_hint") or "wechat source is missing feed_url"
+            raise ValueError(
+                "wechat source {} is missing feed_url: {}".format(
+                    source.get("id", ""), hint
+                )
+            )
 
         timeout = int(source.get("feed_timeout_seconds") or 30)
         request = Request(

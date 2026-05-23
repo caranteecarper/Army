@@ -10,6 +10,7 @@ from core.deduplicate import deduplicate_items
 from core.normalize import normalize_text
 from core.schema import build_normalized_item, make_excerpt, make_item_id
 from core.content_cleaner import clean_website_content
+from core.config_loader import expand_client_config
 from adapters.douyin_adapter import adapt as adapt_douyin
 from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
@@ -275,6 +276,55 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertIn("口播文字", item["content_text"])
         self.assertEqual(item["media"]["videos"][0]["aweme_id"], "123")
         self.assertNotIn("asr_segments", item["media"]["videos"][0])
+
+    def test_client_website_url_expands_to_crawler_source(self):
+        registry = expand_client_config({"websites": ["https://mil.huanqiu.com/"]})
+        source = registry["websites"][0]
+
+        self.assertEqual(source["type"], "website")
+        self.assertEqual(source["list_url"], "https://mil.huanqiu.com/")
+        self.assertEqual(source["article_seed_mode"], "huanqiu_aid_textarea")
+        self.assertEqual(source["max_articles"], 80)
+
+    def test_client_xhs_id_expands_to_profile_source(self):
+        registry = expand_client_config({"xhs": ["abc123"]})
+        source = registry["xhs"][0]
+
+        self.assertEqual(source["type"], "xiaohongshu")
+        self.assertEqual(source["mode"], "user_profile")
+        self.assertEqual(source["user_id"], "abc123")
+        self.assertIn("skill_dir", source)
+
+    def test_client_douyin_id_expands_to_creator_source(self):
+        registry = expand_client_config({"douyin": ["sec_user_id_123"]})
+        source = registry["douyin"][0]
+
+        self.assertEqual(source["type"], "douyin")
+        self.assertEqual(source["mode"], "creator")
+        self.assertEqual(source["creator_ids"], ["sec_user_id_123"])
+        self.assertTrue(source["asr_enabled"])
+
+    def test_client_wechat_feed_link_expands_to_wewe_source(self):
+        registry = expand_client_config(
+            {"wechat": ["http://127.0.0.1:4000/feeds/example.rss?limit=50"]}
+        )
+        source = registry["wechat"][0]
+
+        self.assertEqual(source["type"], "wechat")
+        self.assertEqual(
+            source["feed_url"], "http://127.0.0.1:4000/feeds/example.rss?limit=50"
+        )
+        self.assertTrue(source["article_enrichment"])
+
+    def test_client_wechat_article_link_is_marked_pending(self):
+        registry = expand_client_config(
+            {"wechat": ["https://mp.weixin.qq.com/s/example"]}
+        )
+        source = registry["wechat"][0]
+
+        self.assertEqual(source["type"], "wechat")
+        self.assertEqual(source["pending_link"], "https://mp.weixin.qq.com/s/example")
+        self.assertEqual(source["feed_url"], "")
 
 
 if __name__ == "__main__":
