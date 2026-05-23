@@ -210,3 +210,30 @@ article_urls:
 - 后续可继续新增抖音、快手、B 站、视频号 crawler，以及 ASR、OCR、客资分发模块。
 
 这些扩展当前都没有实现。当前阶段没有 AI 判断、router、口播、Hermes 或云端部署逻辑。
+
+## 抖音接入
+
+抖音链路通过 `tools/douyin_mediacrawler_bridge.py` 调用本地 `../external-tools/MediaCrawler`。主流程仍然只接收 raw JSON，再交给 `adapters/douyin_adapter.py` 统一成 `normalized_items.json`。
+
+```yaml
+- id: dy_keyword_veteran
+  name: 抖音关键词-退役军人
+  type: douyin
+  enabled: true
+  fetch_mode: mediacrawler
+  douyin_python: ../envs/media-douyin/Scripts/python.exe
+  mediacrawler_dir: ../external-tools/MediaCrawler
+  mode: keyword_search
+  keyword: 退役军人
+  publish_time: one_day
+  limit: 10
+  login_type: qrcode
+  headless: false
+  enable_cdp: true
+  fetch_comments: false
+  download_video: false
+```
+
+抖音输出沿用统一 schema：视频文案进入 `content_text`，后续 ASR/OCR 文本也追加进 `content_text`；封面、视频下载地址、音频地址、视频 ID 等放进 `media.videos[0]`；原始 MediaCrawler 结果保留在 `raw.mediacrawler_raw`。当前阶段不做视频理解、不调大模型、不生成口播稿。
+
+抖音真实抓取需要登录时会打开浏览器二维码。扫码完成后，登录状态由 MediaCrawler 保存在外部工具目录的 `browser_data` 下；后续同一环境可复用。MediaCrawler 仓库声明为非商业学习用途，正式使用前需要自行确认平台规则和授权边界。

@@ -188,3 +188,24 @@ xhs:
     require_content: true
     detail_timeout_seconds: 180
     limit: 5
+
+douyin:
+  - id: dy_keyword_veteran
+    name: 抖音关键词-退役军人
+    type: douyin
+    enabled: true
+    fetch_mode: mediacrawler
+    douyin_python: ../envs/media-douyin/Scripts/python.exe
+    mediacrawler_dir: ../external-tools/MediaCrawler
+    mode: keyword_search
+    keyword: 退役军人
+    publish_time: one_day
+    limit: 10
+    login_type: qrcode
+    headless: false
+    enable_cdp: true
+    cdp_connect_existing: false
+    auto_close_browser: true
+    fetch_comments: false
+    download_video: false
+    crawl_timeout_seconds: 900

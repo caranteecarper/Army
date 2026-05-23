@@ -9,6 +9,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from core.deduplicate import deduplicate_items
 from core.normalize import normalize_text
 from core.schema import build_normalized_item, make_excerpt, make_item_id
+from adapters.douyin_adapter import adapt as adapt_douyin
+from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
 from crawlers.website_crawler import WebsiteCrawler
 from crawlers.xhs_crawler import XiaohongshuCrawler
@@ -195,6 +197,51 @@ class BasicPipelineTest(unittest.TestCase):
             crawler._detail_status({"detail_error": "failed"}),
             "error",
         )
+
+
+    def test_douyin_raw_item_maps_video_metadata(self):
+        crawler = DouyinCrawler(PROJECT_ROOT)
+        raw_item = crawler._to_raw_item(
+            {
+                "aweme_id": "123",
+                "desc": "视频文案",
+                "create_time": 1789952400,
+                "liked_count": "12",
+                "collected_count": "3",
+                "comment_count": "2",
+                "share_count": "1",
+                "cover_url": "https://example.com/cover.jpg",
+                "video_download_url": "https://example.com/video.mp4",
+            },
+            {"keyword": "退役军人"},
+        )
+
+        self.assertEqual(raw_item["url"], "https://www.douyin.com/video/123")
+        self.assertEqual(raw_item["metrics"]["like_count"], 12)
+        self.assertEqual(raw_item["media"]["video_download_url"], "https://example.com/video.mp4")
+
+    def test_douyin_adapter_keeps_unified_schema(self):
+        item = adapt_douyin(
+            {
+                "aweme_id": "123",
+                "title": "视频标题",
+                "desc": "视频文案",
+                "url": "https://www.douyin.com/video/123",
+                "publish_time": "2026-05-23T09:00:00+08:00",
+                "metrics": {"like_count": 12, "comment_count": 2},
+                "media": {
+                    "cover_url": "https://example.com/cover.jpg",
+                    "video_download_url": "https://example.com/video.mp4",
+                },
+                "asr_text": "口播文字",
+            },
+            {"id": "dy_001", "name": "抖音测试"},
+        )
+
+        self.assertEqual(item["source_type"], "douyin")
+        self.assertEqual(item["platform"], "抖音")
+        self.assertIn("口播文字", item["content_text"])
+        self.assertEqual(item["media"]["videos"][0]["aweme_id"], "123")
 
 
 if __name__ == "__main__":

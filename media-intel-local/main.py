@@ -9,8 +9,10 @@ import yaml
 from adapters.wechat_adapter import adapt as adapt_wechat
 from adapters.website_adapter import adapt as adapt_website
 from adapters.xhs_adapter import adapt as adapt_xhs
+from adapters.douyin_adapter import adapt as adapt_douyin
 from core.deduplicate import deduplicate_items
 from core.normalize import normalize_item
+from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
 from crawlers.website_crawler import WebsiteCrawler
 from crawlers.xhs_crawler import XiaohongshuCrawler
@@ -23,12 +25,14 @@ CRAWLER_CLASSES = {
     "wechat": WechatCrawler,
     "website": WebsiteCrawler,
     "xiaohongshu": XiaohongshuCrawler,
+    "douyin": DouyinCrawler,
 }
 
 ADAPTERS = {
     "wechat": adapt_wechat,
     "website": adapt_website,
     "xiaohongshu": adapt_xhs,
+    "douyin": adapt_douyin,
 }  # type: Dict[str, Callable[[Dict[str, Any], Dict[str, Any]], Dict[str, Any]]]
 
 
