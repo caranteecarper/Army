@@ -21,7 +21,7 @@ douyin:
   - user_id: 抖音sec_user_id或主页链接
 
 wechat:
-  - link: http://127.0.0.1:4000/feeds/xxx.rss?limit=50&mode=list
+  - link: https://mp.weixin.qq.com/s/公众号文章分享链接
 ```
 
 运行时 `core/config_loader.py` 会自动把客户配置展开成完整 crawler 配置，包括工具路径、浏览器参数、抓取数量、日期窗口、正文补全、ASR 参数等。客户不需要理解 `source_registry.yaml`。
@@ -45,7 +45,15 @@ xhs:
 
 抖音：跟踪账号时填 `user_id`，可以是 sec_user_id，也可以是主页链接。系统自动走 MediaCrawler 的 creator 模式，并保留 ASR 文本输出。关键词监控也支持填 `keyword`。
 
-公众号：当前自动抓取入口是 WeWe RSS feed 链接。客户如果只给公众号文章链接，程序会把它标记为待接入，但还不能凭空变成 feed；这一步需要继续接 WeWe RSS 的“新增公众号源”接口和本地服务启动管理。后续实现后，客户就可以只填一条 `https://mp.weixin.qq.com/s/...`。
+公众号：客户填一条 `https://mp.weixin.qq.com/s/...` 文章分享链接即可。系统会自动检查并启动本地 WeWe RSS 后端，调用 WeWe 的新增公众号源接口，把文章链接转换成 feed，再继续读取 `/feeds/{mpId}.rss`。已经有 WeWe feed 链接时也可以直接填 feed。
+
+公众号第一次使用前需要有一个有效的微信读书登录账号。登录只需要扫码一次：
+
+```bash
+python tools/wewe_login.py
+```
+
+这个命令会自动启动 WeWe 后端、打开扫码 URL，并把登录 token 写入 WeWe 数据库。后续客户只需要填公众号文章链接。
 
 ## 运行方式
 
@@ -117,6 +125,8 @@ python tests/test_basic.py
 - `faster-whisper`：抖音视频 ASR，本地模型，不调用大模型 API。
 
 这些工具默认放在 `../external-tools/`，Python 环境默认放在 `../envs/`。客户版配置不暴露这些路径，由 `core/config_loader.py` 自动补齐。
+
+WeWe RSS 后端默认监听 `http://127.0.0.1:4000`。公众号 crawler 会在需要时自动启动它，不需要客户手动打开 localhost 页面。启动日志写入 `.runtime/wewe_rss/server.stdout.log` 和 `.runtime/wewe_rss/server.stderr.log`。
 
 ## 后续接口
 

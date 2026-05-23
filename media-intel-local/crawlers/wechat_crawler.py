@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 
 from crawlers.base import BaseCrawler
 from crawlers.external import python_command, run_json_command
+from core.wewe_rss_client import WeweRssClient
 
 
 class WechatCrawler(BaseCrawler):
@@ -24,6 +25,12 @@ class WechatCrawler(BaseCrawler):
 
     def _read_wewe_feed(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
         feed_url = str(source.get("feed_url") or "").strip()
+        if not feed_url and source.get("pending_link") and source.get("wewe_auto_add", True):
+            record = self._resolve_pending_link(source)
+            feed_url = str(record.get("feed_url") or "").strip()
+            if record.get("mpName") and not source.get("name"):
+                source["name"] = record["mpName"]
+            source["feed_url"] = feed_url
         if not feed_url:
             hint = source.get("setup_hint") or "wechat source is missing feed_url"
             raise ValueError(
@@ -47,6 +54,20 @@ class WechatCrawler(BaseCrawler):
         if stripped.startswith("{") or stripped.startswith("["):
             return self._parse_json_feed(payload)
         return self._parse_xml_feed(payload)
+
+    def _resolve_pending_link(self, source: Dict[str, Any]) -> Dict[str, Any]:
+        client = WeweRssClient(
+            project_root=self.project_root,
+            base_url=str(source.get("wewe_base_url") or "http://127.0.0.1:4000"),
+            auth_code=str(source.get("wewe_auth_code") or ""),
+            tool_dir=str(source.get("wewe_tool_dir") or "../external-tools/wewe-rss"),
+            auto_start=bool(source.get("wewe_auto_start", True)),
+            startup_timeout_seconds=int(source.get("wewe_startup_timeout_seconds") or 30),
+        )
+        return client.resolve_article_link(
+            str(source.get("pending_link") or ""),
+            limit=int(source.get("feed_limit") or 50),
+        )
 
     def _parse_json_feed(self, payload: str) -> List[Dict[str, Any]]:
         try:

@@ -325,6 +325,8 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(source["type"], "wechat")
         self.assertEqual(source["pending_link"], "https://mp.weixin.qq.com/s/example")
         self.assertEqual(source["feed_url"], "")
+        self.assertTrue(source["wewe_auto_add"])
+        self.assertTrue(source["wewe_auto_start"])
 
 
 if __name__ == "__main__":

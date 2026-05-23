@@ -150,6 +150,13 @@ def _wechat_source(item: Any) -> Dict[str, Any]:
         "wechat_article_python": data.get("wechat_article_python") or "../envs/media-crawlers/python.exe",
         "wechat_article_crawler_dir": data.get("wechat_article_crawler_dir") or "../external-tools/wechat-article-crawler",
         "feed_timeout_seconds": int(data.get("feed_timeout_seconds") or 30),
+        "feed_limit": int(data.get("feed_limit") or data.get("limit") or 50),
+        "wewe_base_url": data.get("wewe_base_url") or "http://127.0.0.1:4000",
+        "wewe_auth_code": data.get("wewe_auth_code") or "",
+        "wewe_tool_dir": data.get("wewe_tool_dir") or "../external-tools/wewe-rss",
+        "wewe_auto_start": bool(data.get("wewe_auto_start", True)),
+        "wewe_auto_add": bool(data.get("wewe_auto_add", True)),
+        "wewe_startup_timeout_seconds": int(data.get("wewe_startup_timeout_seconds") or 30),
     }
     if _is_wewe_feed(link):
         source["feed_url"] = link
@@ -157,8 +164,8 @@ def _wechat_source(item: Any) -> Dict[str, Any]:
         source["feed_url"] = ""
         source["pending_link"] = link
         source["setup_hint"] = (
-            "这个公众号链接还需要先通过 WeWe RSS 添加成 feed。"
-            "当前自动抓取入口需要 feed_url；后续可接 WeWe 的新增源 API 做全自动添加。"
+            "这个公众号链接会通过本地 WeWe RSS 自动添加成 feed；"
+            "如果失败，请确认 WeWe 已有可用的微信读书登录账号。"
         )
     return source
 

@@ -7,6 +7,9 @@ project:
 # 工具路径、浏览器、ASR、日期窗口、正文补全等工程参数由 core/config_loader.py 自动补齐。
 
 wechat:
+  # 客户最终可以只填微信公众号文章分享链接；系统会启动本地 WeWe 后端并自动添加成 feed。
+  # - link: https://mp.weixin.qq.com/s/5fTnl5qm9Gq7HQJ9DP_isA
+
   - id: wx_wewe_walk_from_barracks
     name: 我们从军营走来
     link: http://127.0.0.1:4000/feeds/MP_WXS_3271380538.rss?limit=50&mode=list
