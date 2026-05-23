@@ -11,6 +11,11 @@ from core.normalize import normalize_text
 from core.schema import build_normalized_item, make_excerpt, make_item_id
 from core.content_cleaner import clean_website_content
 from core.config_loader import expand_client_config
+from core.intake_schema import (
+    build_intake_item,
+    deduplicate_intake_items,
+    should_keep_intake_item,
+)
 from adapters.douyin_adapter import adapt as adapt_douyin
 from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
@@ -327,6 +332,57 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(source["feed_url"], "")
         self.assertTrue(source["wewe_auto_add"])
         self.assertTrue(source["wewe_auto_start"])
+
+    def test_intake_schema_fills_fixed_heat_fields(self):
+        item = build_intake_item(
+            source_type="social_hotspot",
+            platform="weibo",
+            source_name="微博热搜",
+            source_url="https://example.com/hot",
+            title="热点话题",
+            raw_text="热榜原始摘要",
+            heat_signals={"rank": 3},
+        )
+
+        self.assertEqual(item["source_type"], "social_hotspot")
+        self.assertEqual(item["heat_signals"]["rank"], 3)
+        self.assertIsNone(item["heat_signals"]["views"])
+        self.assertEqual(item["extra"]["fact_confidence"], "unknown")
+
+    def test_intake_filter_drops_missing_title_and_text(self):
+        item = build_intake_item(
+            source_type="platform_trend",
+            platform="douyin",
+            source_name="抖音创作者中心",
+            source_url="https://example.com",
+            title="",
+            raw_text="",
+        )
+
+        keep, reason = should_keep_intake_item(item)
+
+        self.assertFalse(keep)
+        self.assertEqual(reason, "missing_title_and_raw_text")
+
+    def test_intake_deduplicate_keeps_first_source_url(self):
+        first = build_intake_item(
+            source_type="social_hotspot",
+            platform="baidu",
+            source_name="百度热搜",
+            source_url="https://example.com/topic",
+            title="话题",
+            raw_text="第一条",
+        )
+        duplicate = build_intake_item(
+            source_type="social_hotspot",
+            platform="baidu",
+            source_name="百度热搜",
+            source_url="https://example.com/topic",
+            title="话题",
+            raw_text="第二条",
+        )
+
+        self.assertEqual(deduplicate_intake_items([first, duplicate]), [first])
 
 
 if __name__ == "__main__":

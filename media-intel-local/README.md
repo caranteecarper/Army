@@ -87,6 +87,30 @@ python tests/test_basic.py
 
 单个源失败会写入 `run_log.json.errors`，不会阻断其他源。配置文件本身无法读取时程序整体失败。
 
+## 趋势与热点 Inbox
+
+平台趋势和社会热点是另一条轻量 intake 链路，不和媒体正文 `normalized_items.json` 混在一起。客户或采集脚本先把原始信号写入：
+
+```text
+config/trend_hotspot_intake.yaml
+```
+
+然后运行：
+
+```bash
+python tools/trend_hotspot_intake.py --date today
+```
+
+输出到：
+
+```text
+data/inbox/platform_trends_YYYYMMDD.jsonl
+data/inbox/social_hotspots_YYYYMMDD.jsonl
+data/inbox/trend_hotspot_run_log_YYYYMMDD.json
+```
+
+这条链路只做字段标准化、极轻过滤和去重。它不会判断是否适合军旅教培，不生成 Idea Card、Topic Card 或脚本，也不调用 AI。
+
 ## 统一 Schema
 
 所有平台最终都会输出为同一结构：

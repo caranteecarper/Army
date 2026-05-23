@@ -1,0 +1,66 @@
+project:
+  name: trend-hotspot-intake-local
+  timezone: Asia/Shanghai
+
+# 第一版支持人工/半自动录入原始信号。
+# 不调用 AI，不判断业务相关性，不生成选题或脚本。
+
+platform_trends:
+  - platform: douyin
+    source_name: 抖音创作者中心
+    source_url: https://creator.douyin.com/
+    title: 示例：平台创作活动
+    raw_text: 平台鼓励创作者围绕指定话题发布内容，此处保留活动页原始说明。
+    tags:
+      - 创作者活动
+      - 热门话题
+    heat_signals:
+      rank:
+      views:
+      likes:
+      comments:
+      shares:
+      search_index:
+    time_window:
+      started_at:
+      ends_at:
+    raw_media: []
+    extra:
+      official_tags:
+        - 创作者活动
+      recommended_formats: []
+      participation_rule: ""
+      traffic_hint: ""
+      deadline: ""
+    notes: 示例数据，可删除或替换
+    enabled: true
+
+social_hotspots:
+  - platform: baidu
+    source_name: 百度热搜
+    source_url: https://top.baidu.com/board?tab=realtime
+    title: 示例：社会热点话题
+    raw_text: 热榜页面中的原始摘要或话题说明，不做业务改写。
+    tags:
+      - 热搜
+    heat_signals:
+      rank: 1
+      views:
+      likes:
+      comments:
+      shares:
+      search_index:
+    time_window:
+      started_at:
+      ends_at:
+    raw_media: []
+    extra:
+      hotspot_rank: 1
+      hotspot_category: unknown
+      event_status: unknown
+      fact_confidence: unknown
+      sensitive_level: unknown
+      related_entities: []
+      public_emotion: []
+    notes: 示例数据，可删除或替换
+    enabled: true

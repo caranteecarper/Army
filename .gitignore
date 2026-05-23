@@ -16,6 +16,8 @@ external-tools/
 # Generated crawler output
 media-intel-local/output/*
 !media-intel-local/output/.gitkeep
+media-intel-local/data/inbox/*
+!media-intel-local/data/inbox/.gitkeep
 
 # Local secrets/session data
 *.env
