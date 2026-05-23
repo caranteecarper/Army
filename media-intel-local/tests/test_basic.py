@@ -266,7 +266,6 @@ class BasicPipelineTest(unittest.TestCase):
                     "video_download_url": "https://example.com/video.mp4",
                 },
                 "asr_text": "口播文字",
-                "asr_segments": [{"start": 0.0, "end": 1.0, "text": "口播文字"}],
             },
             {"id": "dy_001", "name": "抖音测试"},
         )
@@ -275,7 +274,7 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(item["platform"], "抖音")
         self.assertIn("口播文字", item["content_text"])
         self.assertEqual(item["media"]["videos"][0]["aweme_id"], "123")
-        self.assertEqual(item["media"]["videos"][0]["asr_segments"][0]["text"], "口播文字")
+        self.assertNotIn("asr_segments", item["media"]["videos"][0])
 
 
 if __name__ == "__main__":

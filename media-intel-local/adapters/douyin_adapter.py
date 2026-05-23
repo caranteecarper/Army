@@ -17,7 +17,6 @@ def adapt(raw_item: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
         "video_download_url": media.get("video_download_url") or "",
         "music_download_url": media.get("music_download_url") or "",
         "asr_text": raw_item.get("asr_text") or "",
-        "asr_segments": raw_item.get("asr_segments") or [],
         "asr_language": raw_item.get("asr_language") or "",
         "asr_error": raw_item.get("asr_error") or "",
         "ocr_text": raw_item.get("ocr_text") or "",

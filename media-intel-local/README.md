@@ -253,7 +253,6 @@ ASR 结果会写入：
 
 - `content_text`：视频文案 + `ASR: ...`
 - `media.videos[0].asr_text`
-- `media.videos[0].asr_segments`
 - `media.videos[0].asr_error`
 
 同一 `aweme_id` 的转写结果缓存在 `.runtime/douyin/asr/cache/`，避免重复下载和重复转写。若某条视频没有语音、地址失效或解码失败，pipeline 不会整体失败，只会在该视频的 `asr_error` 中记录原因。
