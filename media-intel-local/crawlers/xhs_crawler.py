@@ -18,6 +18,8 @@ class XiaohongshuCrawler(BaseCrawler):
             self._candidate_to_item(candidate, source, target_date)
             for candidate in candidates
         ]
+        if source.get("require_content"):
+            items = [item for item in items if str(item.get("desc") or "").strip()]
         return self._filter_by_date(items, "time", target_date)
 
     def _load_candidates(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -80,7 +82,7 @@ class XiaohongshuCrawler(BaseCrawler):
                 try:
                     detail = self._run_skill(
                         source,
-                        ["feed", feed_id, xsec_token],
+                        self._detail_args(source, candidate, feed_id, xsec_token),
                         timeout_seconds=int(source.get("detail_timeout_seconds") or 300),
                     )
                 except ExternalCommandError as exc:
@@ -89,6 +91,36 @@ class XiaohongshuCrawler(BaseCrawler):
                         "note": {},
                     }
         return self._to_raw_item(candidate, detail, target_date)
+
+    def _detail_args(
+        self,
+        source: Dict[str, Any],
+        candidate: Dict[str, Any],
+        feed_id: str,
+        xsec_token: str,
+    ) -> List[str]:
+        xsec_source = str(
+            candidate.get("xsec_source")
+            or candidate.get("xsecSource")
+            or source.get("xsec_source")
+            or "pc_search"
+        )
+        fallback_sources = source.get("fallback_xsec_sources") or [
+            "pc_search",
+            "pc_feed",
+            "pc_note",
+        ]
+        if isinstance(fallback_sources, list):
+            fallback_value = ",".join(str(item) for item in fallback_sources)
+        else:
+            fallback_value = str(fallback_sources)
+        return [
+            "feed",
+            feed_id,
+            xsec_token,
+            "--xsec-source={}".format(xsec_source),
+            "--fallback-sources={}".format(fallback_value),
+        ]
 
     def _to_raw_item(
         self, candidate: Dict[str, Any], detail: Dict[str, Any], target_date: str = ""
@@ -104,14 +136,18 @@ class XiaohongshuCrawler(BaseCrawler):
             interact = {}
         feed_id = self._candidate_id(candidate) or note.get("noteId") or note.get("id") or ""
         image_list = note.get("imageList") or note.get("images") or []
-        time_value = (
+        raw_time_value = (
             note.get("time")
             or note.get("createTime")
             or detail.get("time")
             or candidate.get("time", "")
         )
-        if time_value:
-            normalized_time = self._normalized_datetime(time_value)
+        raw_publish_time = self._normalized_datetime(raw_time_value)
+        if target_date and candidate.get("xsec_token"):
+            normalized_time = target_date
+            time_source = "search_window"
+        elif raw_publish_time:
+            normalized_time = raw_publish_time
             time_source = "raw"
         else:
             normalized_time = target_date
@@ -131,6 +167,9 @@ class XiaohongshuCrawler(BaseCrawler):
             ),
             "time": normalized_time,
             "time_source": time_source,
+            "raw_publish_time": raw_publish_time,
+            "detail_status": self._detail_status(detail),
+            "detail_source": detail.get("detail_source", "") if isinstance(detail, dict) else "",
             "desc": note.get("desc")
             or note.get("description")
             or note.get("content")
@@ -147,6 +186,23 @@ class XiaohongshuCrawler(BaseCrawler):
             "images": self._images(image_list, candidate, card),
             "skill_raw": {"candidate": candidate, "detail": detail},
         }
+
+    def _detail_status(self, detail: Dict[str, Any]) -> str:
+        if not isinstance(detail, dict):
+            return "missing"
+        if detail.get("detail_error"):
+            return "error"
+        if detail.get("detail_status"):
+            return str(detail["detail_status"])
+        note = detail.get("note")
+        if isinstance(note, dict):
+            desc = str(note.get("desc") or note.get("description") or note.get("content") or "").strip()
+            title = str(note.get("title") or note.get("displayTitle") or "").strip()
+            if desc:
+                return "content"
+            if title:
+                return "metadata_only"
+        return "card_only"
 
     def _fallback_title(self, candidate: Dict[str, Any]) -> str:
         user = str(candidate.get("user") or "").strip()

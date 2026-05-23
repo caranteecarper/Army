@@ -1,0 +1,163 @@
+diff --git a/scripts/__main__.py b/scripts/__main__.py
+--- a/scripts/__main__.py
++++ b/scripts/__main__.py
+@@
+ def cmd_feed(args):
+     """笔记详情命令"""
++    fallback_sources = []
++    if getattr(args, "fallback_sources", None):
++        fallback_sources = [
++            item.strip()
++            for item in args.fallback_sources.split(",")
++            if item.strip()
++        ]
+     detail = feed.feed_detail(
+         feed_id=args.feed_id,
+         xsec_token=args.xsec_token or "",
+         load_comments=args.load_comments,
+         max_comments=args.max_comments,
++        xsec_source=args.xsec_source or "pc_feed",
++        fallback_sources=fallback_sources,
+         headless=_headless(args),
+         cookie_path=args.cookie or DEFAULT_COOKIE_PATH,
+     )
+@@
+     f_p = subparsers.add_parser("feed", help="获取笔记详情")
+     f_p.add_argument("feed_id", help="笔记 ID")
+     f_p.add_argument("xsec_token", nargs="?", help="xsec_token")
++    f_p.add_argument("--xsec-source", default="pc_feed", help="xsec_source 来源")
++    f_p.add_argument("--fallback-sources", default="", help="逗号分隔的备用 xsec_source")
+     f_p.add_argument("--load-comments", "-l", action="store_true", help="加载评论")
+diff --git a/scripts/feed.py b/scripts/feed.py
+--- a/scripts/feed.py
++++ b/scripts/feed.py
+@@
++    def _extract_dom_detail(self, feed_id: str) -> Optional[Dict[str, Any]]:
++        """从详情页 DOM 兜底提取标题、正文、图片和互动数据。"""
++        page = self.client.page
++        result = page.evaluate("""(fid) => {
++            const pickText = (selectors) => {
++                for (const selector of selectors) {
++                    const el = document.querySelector(selector);
++                    const text = el && el.textContent ? el.textContent.trim() : '';
++                    if (text) return text;
++                }
++                return '';
++            };
++            const title = pickText(['#detail-title', '.title', '.note-content .title', '[class*="title"]']);
++            let desc = pickText(['#detail-desc', '.desc', '.note-content .desc', '.note-text', '[class*="desc"]']);
++            if (!desc) {
++                const content = document.querySelector('.note-content');
++                desc = content && content.textContent ? content.textContent.trim() : '';
++            }
++            const dateText = pickText(['.date', '.bottom-container .date', '[class*="date"]']);
++            const images = Array.from(document.querySelectorAll('img'))
++                .map(img => img.currentSrc || img.src || img.getAttribute('src') || '')
++                .filter(src => src && !src.includes('avatar') && !src.includes('data:image'))
++                .slice(0, 20)
++                .map(src => ({ urlDefault: src }));
++            if (!title && !desc && images.length === 0) return '';
++            return JSON.stringify({
++                note: { noteId: fid, title, desc, timeText: dateText, imageList: images, interactInfo: {} },
++                detail_status: 'dom_fallback'
++            });
++        }""", feed_id)
++        if not result:
++            return None
++        try:
++            return json.loads(result)
++        except json.JSONDecodeError:
++            return None
++
++    def _has_detail_content(self, detail: Optional[Dict[str, Any]]) -> bool:
++        if not isinstance(detail, dict):
++            return False
++        note = detail.get("note")
++        if not isinstance(note, dict):
++            return False
++        title = str(note.get("title") or note.get("displayTitle") or "").strip()
++        desc = str(note.get("desc") or note.get("description") or note.get("content") or "").strip()
++        images = note.get("imageList") or note.get("images") or []
++        return bool(title or desc or images)
++
+     def get_feed_detail(
+@@
+         xsec_source: str = "pc_feed",
++        fallback_sources: Optional[list] = None,
+@@
+-        url = self._make_feed_detail_url(feed_id, xsec_token, xsec_source)
+-        print(f"打开笔记详情页: {url}", file=sys.stderr)
+-        client.navigate(url)
+-
+-        client.wait_for_initial_state()
+-        time.sleep(2)
+-
+-        detail = None
+-        for attempt in range(3):
+-            detail = self._extract_feed_detail(feed_id)
+-            if detail:
+-                break
+-            if attempt < 2:
+-                print(f"noteDetailMap 未就绪，等待重试 ({attempt + 1}/3)...", file=sys.stderr)
+-                time.sleep(2)
++        sources = []
++        for source in [xsec_source] + (fallback_sources or []):
++            if source and source not in sources:
++                sources.append(source)
++        detail = None
++        used_source = ""
++        for source in sources:
++            url = self._make_feed_detail_url(feed_id, xsec_token, source)
++            print(f"打开笔记详情页: {url}", file=sys.stderr)
++            client.navigate(url)
++            client.wait_for_initial_state()
++            time.sleep(2)
++            for attempt in range(5):
++                detail = self._extract_feed_detail(feed_id)
++                if self._has_detail_content(detail):
++                    used_source = source
++                    break
++                if attempt < 4:
++                    print(f"noteDetailMap 未就绪，等待重试 ({attempt + 1}/5)...", file=sys.stderr)
++                    time.sleep(2)
++            if not self._has_detail_content(detail):
++                detail = self._extract_dom_detail(feed_id)
++                if self._has_detail_content(detail):
++                    used_source = source
++            if self._has_detail_content(detail):
++                break
+@@
+-        if not detail:
++        if not self._has_detail_content(detail):
+             print("未获取到笔记详情", file=sys.stderr)
+             return None
++        detail["detail_source"] = used_source
++        detail.setdefault("detail_status", "state_detail")
+@@
+     xsec_source: str = "pc_feed",
++    fallback_sources: Optional[list] = None,
+@@
+             xsec_source=xsec_source,
++            fallback_sources=fallback_sources,
+diff --git a/scripts/search.py b/scripts/search.py
+--- a/scripts/search.py
++++ b/scripts/search.py
+@@
+                     id: item.id || '',
+                     xsec_token: item.xsecToken || '',
++                    xsec_source: item.xsecSource || 'pc_search',
+@@
+                     const tokenMatch = href.match(/xsec_token=([^&]+)/);
+                     entry.xsec_token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : '';
++                    const sourceMatch = href.match(/xsec_source=([^&]+)/);
++                    entry.xsec_source = sourceMatch ? decodeURIComponent(sourceMatch[1]) : 'pc_search';
+@@
+                         const tokenMatch = href.match(/xsec_token=([^&]+)/);
+                         entry.xsec_token = tokenMatch ? decodeURIComponent(tokenMatch[1]) : '';
++                        const sourceMatch = href.match(/xsec_source=([^&]+)/);
++                        entry.xsec_source = sourceMatch ? decodeURIComponent(sourceMatch[1]) : 'pc_search';
+                     } else {
+                         entry.id = '';
+                         entry.xsec_token = '';
++                        entry.xsec_source = 'pc_search';
+                     }

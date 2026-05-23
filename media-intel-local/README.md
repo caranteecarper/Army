@@ -169,12 +169,18 @@ article_urls:
   keyword: 退役军人
   sort_by: 最新
   publish_time: 一天内
-  fetch_detail: false
+  fetch_detail: true
+  fallback_xsec_sources:
+    - pc_search
+    - pc_feed
+    - pc_note
+  require_content: true
+  detail_timeout_seconds: 180
   limit: 20
 ```
 
 小红书真实抓取前要在 skill 环境完成登录并保留 cookie。设置 `cookie_path` 时，crawler 会把它传给 skill CLI。
-当前默认先抓搜索卡片，`fetch_detail: false`，可稳定输出标题、链接、封面和互动数据。搜索卡片没有精确发布时间时，crawler 会用本次 `target_date` 作为搜索窗口日期，并在 raw item 中标记 `time_source: target_date_fallback`。后续详情抓取稳定后再改回 `fetch_detail: true` 补正文和精确发布时间。
+当前默认先抓搜索卡片，再打开详情页补正文。详情页会按 `pc_search`、`pc_feed`、`pc_note` 多路重试，并用 DOM 兜底提取标题、正文和图片。搜索卡片没有严格可用的目标日期时，crawler 会用本次 `target_date` 作为搜索窗口日期，并在 raw item 中保留 `raw_publish_time`、`time_source`、`detail_status` 和 `detail_source`。配置 `require_content: true` 时，正文为空的条目不会进入最终输出。
 
 ## 外部工具准备
 

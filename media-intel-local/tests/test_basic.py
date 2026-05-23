@@ -155,6 +155,47 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(raw_item["time"], "2026-05-22")
         self.assertEqual(raw_item["time_source"], "target_date_fallback")
 
+    def test_xhs_search_detail_keeps_search_window_date(self):
+        crawler = XiaohongshuCrawler(PROJECT_ROOT)
+        raw_item = crawler._to_raw_item(
+            {
+                "id": "note-1",
+                "xsec_token": "token",
+                "title": "搜索标题",
+            },
+            {"note": {"time": 1775129323000, "desc": "详情正文"}},
+            target_date="2026-05-22",
+        )
+
+        self.assertEqual(raw_item["time"], "2026-05-22")
+        self.assertEqual(raw_item["time_source"], "search_window")
+        self.assertTrue(raw_item["raw_publish_time"].startswith("2026-"))
+        self.assertEqual(raw_item["desc"], "详情正文")
+
+    def test_xhs_detail_args_keep_source_and_fallbacks(self):
+        crawler = XiaohongshuCrawler(PROJECT_ROOT)
+        args = crawler._detail_args(
+            {"fallback_xsec_sources": ["pc_search", "pc_feed"]},
+            {"xsec_source": "pc_note"},
+            "note-1",
+            "token",
+        )
+
+        self.assertIn("--xsec-source=pc_note", args)
+        self.assertIn("--fallback-sources=pc_search,pc_feed", args)
+
+    def test_xhs_detail_status_marks_content(self):
+        crawler = XiaohongshuCrawler(PROJECT_ROOT)
+
+        self.assertEqual(
+            crawler._detail_status({"note": {"desc": "正文"}}),
+            "content",
+        )
+        self.assertEqual(
+            crawler._detail_status({"detail_error": "failed"}),
+            "error",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
