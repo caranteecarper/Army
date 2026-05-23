@@ -9,6 +9,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from core.deduplicate import deduplicate_items
 from core.normalize import normalize_text
 from core.schema import build_normalized_item, make_excerpt, make_item_id
+from core.content_cleaner import clean_website_content
 from adapters.douyin_adapter import adapt as adapt_douyin
 from crawlers.douyin_crawler import DouyinCrawler
 from crawlers.wechat_crawler import WechatCrawler
@@ -117,6 +118,37 @@ class BasicPipelineTest(unittest.TestCase):
         self.assertEqual(ifeng, "2026-05-21 11:19:15")
         self.assertEqual(thepaper, "2026-05-21 14:32")
         self.assertEqual(huanqiu, "1779404566895")
+
+    def test_website_cleaner_extracts_article_text_and_images(self):
+        text = (
+            '![](https://example.com/logo.png) /csr-component/config/article/index.js '
+            '<article><section data-type="rtext"><p>第一段正文</p>'
+            '<p><img src="//img.huanqiucdn.cn/a.jpg" /></p><p>第二段正文</p>'
+            '</section></article>1779404566895责编：测试'
+        )
+
+        cleaned, images = clean_website_content(text, source={"id": "web_huanqiu_mil"})
+
+        self.assertIn("第一段正文", cleaned)
+        self.assertIn("第二段正文", cleaned)
+        self.assertNotIn("csr-component", cleaned)
+        self.assertNotIn("example.com/a.jpg", cleaned)
+        self.assertIn("https://img.huanqiucdn.cn/a.jpg", images)
+
+    def test_website_cleaner_keeps_markdown_text_without_urls(self):
+        text = (
+            "* [首页](https://www.example.com/) * [军事](https://mil.example.com/) "
+            "# 正文标题 这是正文第一句。"
+            "![图](https://example.com/pic.jpg) "
+            "[来源](https://source.example.com/a) 这是正文第二句。"
+        )
+
+        cleaned, images = clean_website_content(text)
+
+        self.assertIn("这是正文第一句", cleaned)
+        self.assertIn("这是正文第二句", cleaned)
+        self.assertNotIn("https://", cleaned)
+        self.assertEqual(images, ["https://example.com/pic.jpg"])
 
     def test_xhs_detail_maps_to_existing_adapter_shape(self):
         crawler = XiaohongshuCrawler(PROJECT_ROOT)
