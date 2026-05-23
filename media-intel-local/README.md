@@ -237,3 +237,23 @@ article_urls:
 抖音输出沿用统一 schema：视频文案进入 `content_text`，后续 ASR/OCR 文本也追加进 `content_text`；封面、视频下载地址、音频地址、视频 ID 等放进 `media.videos[0]`；原始 MediaCrawler 结果保留在 `raw.mediacrawler_raw`。当前阶段不做视频理解、不调大模型、不生成口播稿。
 
 抖音真实抓取需要登录时会打开浏览器二维码。扫码完成后，登录状态由 MediaCrawler 保存在外部工具目录的 `browser_data` 下；后续同一环境可复用。MediaCrawler 仓库声明为非商业学习用途，正式使用前需要自行确认平台规则和授权边界。
+
+抖音口播转文字由 `tools/video_asr_bridge.py` 完成，使用外部 `media-douyin` 环境中的 `faster-whisper`，不调用大模型 API。开启方式是在 source 中设置：
+
+```yaml
+asr_enabled: true
+asr_python: ../envs/media-douyin/Scripts/python.exe
+asr_model: small
+asr_language: zh
+asr_device: cpu
+asr_compute_type: int8
+```
+
+ASR 结果会写入：
+
+- `content_text`：视频文案 + `ASR: ...`
+- `media.videos[0].asr_text`
+- `media.videos[0].asr_segments`
+- `media.videos[0].asr_error`
+
+同一 `aweme_id` 的转写结果缓存在 `.runtime/douyin/asr/cache/`，避免重复下载和重复转写。若某条视频没有语音、地址失效或解码失败，pipeline 不会整体失败，只会在该视频的 `asr_error` 中记录原因。

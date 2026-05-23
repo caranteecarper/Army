@@ -206,6 +206,14 @@ douyin:
     enable_cdp: true
     cdp_connect_existing: false
     auto_close_browser: true
+    reuse_last_success_on_empty: true
     fetch_comments: false
     download_video: false
+    asr_enabled: true
+    asr_python: ../envs/media-douyin/Scripts/python.exe
+    asr_model: small
+    asr_language: zh
+    asr_device: cpu
+    asr_compute_type: int8
+    asr_timeout_seconds: 1800
     crawl_timeout_seconds: 900

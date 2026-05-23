@@ -1,4 +1,6 @@
 from datetime import datetime
+import json
+from pathlib import Path
 from typing import Any, Dict, List
 
 from crawlers.base import BaseCrawler
@@ -14,8 +16,13 @@ class DouyinCrawler(BaseCrawler):
             return self._filter_by_date(items, "publish_time", target_date)
 
         results = self._crawl_with_mediacrawler(source)
+        if not results and source.get("reuse_last_success_on_empty", True):
+            results = self._load_last_mediacrawler_results(source)
         items = [self._to_raw_item(item, source) for item in results]
-        return self._filter_by_date(items, "publish_time", target_date)
+        items = self._filter_by_date(items, "publish_time", target_date)
+        if source.get("asr_enabled"):
+            items = self._enrich_with_asr(items, source)
+        return items
 
     def _crawl_with_mediacrawler(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
         tool_dir = source.get("mediacrawler_dir")
@@ -64,6 +71,89 @@ class DouyinCrawler(BaseCrawler):
         if not isinstance(results, list):
             raise ValueError("Douyin MediaCrawler bridge must return a JSON list")
         return [item for item in results if isinstance(item, dict)]
+
+    def _load_last_mediacrawler_results(self, source: Dict[str, Any]) -> List[Dict[str, Any]]:
+        source_id = str(source.get("id") or "source")
+        output_root = (
+            self.project_root
+            / ".runtime"
+            / "douyin"
+            / "mediacrawler-output"
+            / source_id
+        )
+        files = sorted(
+            output_root.rglob("*_contents_*.jsonl"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for path in files:
+            rows = self._read_jsonl(path)
+            if rows:
+                return rows
+        return []
+
+    def _read_jsonl(self, path: Path) -> List[Dict[str, Any]]:
+        rows = []
+        try:
+            with path.open("r", encoding="utf-8") as file_obj:
+                for line in file_obj:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    try:
+                        parsed = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if isinstance(parsed, dict):
+                        rows.append(parsed)
+        except OSError:
+            return []
+        return rows
+
+    def _enrich_with_asr(
+        self, items: List[Dict[str, Any]], source: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        if not items:
+            return items
+        bridge = self.project_root / "tools" / "video_asr_bridge.py"
+        command = python_command(source.get("asr_python") or source.get("douyin_python"), self.project_root)
+        command.append(str(bridge))
+        payload = {
+            "runtime_dir": str(self.project_root / ".runtime" / "douyin" / "asr"),
+            "model": source.get("asr_model") or "small",
+            "language": source.get("asr_language") or "zh",
+            "device": source.get("asr_device") or "cpu",
+            "compute_type": source.get("asr_compute_type") or "int8",
+            "items": [
+                {
+                    "aweme_id": item.get("aweme_id") or "",
+                    "video_url": (item.get("media") or {}).get("video_download_url") or item.get("url") or "",
+                }
+                for item in items
+            ],
+        }
+        results = run_json_command(
+            command,
+            payload=payload,
+            timeout_seconds=int(source.get("asr_timeout_seconds") or 1800),
+        )
+        if not isinstance(results, list):
+            raise ValueError("ASR bridge must return a JSON list")
+        by_id = {
+            str(item.get("aweme_id") or ""): item
+            for item in results
+            if isinstance(item, dict)
+        }
+        for item in items:
+            result = by_id.get(str(item.get("aweme_id") or ""))
+            if not result:
+                continue
+            item["asr_text"] = result.get("asr_text") or ""
+            item["asr_segments"] = result.get("asr_segments") or []
+            item["asr_language"] = result.get("asr_language") or ""
+            item["asr_language_probability"] = result.get("asr_language_probability")
+            item["asr_error"] = result.get("asr_error") or ""
+        return items
 
     def _to_raw_item(self, item: Dict[str, Any], source: Dict[str, Any]) -> Dict[str, Any]:
         create_time = item.get("create_time")
